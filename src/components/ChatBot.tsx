@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChatMessage, BotState, StationCard, OrderCard, ChatRoomMessage, Review, SmartSlot } from '../types';
-import { stations, userBalance, userBonusPoints, userName, stationChatMessages, stationReviews, generateSmartSlots } from '../data';
+import { ChatMessage, BotState, StationCard, OrderCard, SmartSlot } from '../types';
+import { stations, userBalance, userBonusPoints, userName, stationChatMessages, stationReviews, yandexReviews, generateSmartSlots, getBestStation } from '../data';
 
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
@@ -13,7 +13,6 @@ export const ChatBot: React.FC = () => {
   const [activeOrders, setActiveOrders] = useState<OrderCard[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<SmartSlot | null>(null);
-  const [userReview, setUserReview] = useState<string>('');
   const [userRating, setUserRating] = useState<number>(5);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -25,24 +24,21 @@ export const ChatBot: React.FC = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  // Initial greeting
+  // Initial greeting with optimized UX
   useEffect(() => {
     const timer = setTimeout(() => {
+      const bestStation = getBestStation();
       addBotMessage(
-        `Привет, ${userName}! 👋\n\nЯ — бот сети АЗС **Max Fuel** с инновационной системой **Smart Slots** 🚀\n\nПомогу заправиться быстро и без очередей!\n\nЧто хотите сделать?`,
+        `Привет, ${userName}! 👋\n\nЯ — бот **Max Fuel** с системой **Smart Slots** 🚀\n\n💡 *Подсказка:* Сейчас лучше всего на **${bestStation.name}** — всего ${bestStation.queueCount} авто в очереди!\n\n⭐ Рейтинг Яндекс: **${bestStation.yandexRating}/5** (${bestStation.yandexReviewsCount} отзывов)`,
         [
-          { buttons: [{ label: '⛽ Заправить авто', action: 'refuel', style: 'primary' }] },
+          { buttons: [{ label: `⛽ Быстрая заправка (${bestStation.name})`, action: `quick_refuel_${bestStation.id}`, style: 'primary' }] },
           { buttons: [
-            { label: '📍 Найти АЗС', action: 'find_station' },
+            { label: '📍 Выбрать АЗС', action: 'find_station' },
             { label: '📋 Мои заказы', action: 'my_orders' },
           ]},
           { buttons: [
             { label: '💬 Чат водителей', action: 'drivers_chat' },
-            { label: '⭐ Отзывы', action: 'reviews' },
-          ]},
-          { buttons: [
-            { label: '💳 Баланс', action: 'balance' },
-            { label: '🚀 Как работает Smart Slots?', action: 'how_smart_slots' },
+            { label: '⭐ Отзывы Яндекс', action: 'reviews' },
           ]},
         ]
       );
@@ -53,7 +49,7 @@ export const ChatBot: React.FC = () => {
 
   const addBotMessage = useCallback((text: string, buttons?: ChatMessage['buttons'], extra?: Partial<ChatMessage>) => {
     setIsTyping(true);
-    const delay = Math.min(600 + text.length * 10, 1500);
+    const delay = Math.min(500 + text.length * 8, 1200);
     
     setTimeout(() => {
       setIsTyping(false);
@@ -80,6 +76,11 @@ export const ChatBot: React.FC = () => {
   const handleAction = (action: string, label: string) => {
     addUserMessage(label);
 
+    // Quick refuel
+    if (action.startsWith('quick_refuel_')) {
+      handleSelectStation(action.replace('quick_refuel_', ''));
+      return;
+    }
     if (action.startsWith('select_station_')) {
       handleSelectStation(action.replace('select_station_', ''));
       return;
@@ -109,13 +110,13 @@ export const ChatBot: React.FC = () => {
     if (action.startsWith('rate_')) {
       const rating = parseInt(action.replace('rate_', ''));
       setUserRating(rating);
-      addBotMessage(`Вы поставили ${'⭐'.repeat(rating)}. Напишите ваш отзыв:`, [
-        { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
-      ]);
-      return;
-    }
-    if (action.startsWith('yield_')) {
-      handleYieldPosition(action.replace('yield_', ''));
+      addBotMessage(
+        `Вы поставили ${'⭐'.repeat(rating)}\n\nНапишите ваш отзыв (в реальном приложении здесь будет поле ввода):`,
+        [
+          { buttons: [{ label: '✅ Отправить отзыв', action: 'back_to_menu', style: 'primary' }] },
+          { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
+        ]
+      );
       return;
     }
 
@@ -162,9 +163,6 @@ export const ChatBot: React.FC = () => {
       case 'show_qr':
         handleShowQR();
         break;
-      case 'change_station':
-        handleRefuel();
-        break;
       case 'send_message':
         handleSendMessage();
         break;
@@ -172,7 +170,7 @@ export const ChatBot: React.FC = () => {
         handleSubmitReview();
         break;
       default:
-        addBotMessage('Извините, не понял команду. Попробуйте выбрать из кнопок ниже 👇', [
+        addBotMessage('Не понял команду. Попробуйте из меню:', [
           { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu', style: 'primary' }] },
         ]);
     }
@@ -180,29 +178,29 @@ export const ChatBot: React.FC = () => {
 
   const handleRefuel = () => {
     setBotState('choosing_station');
+    const bestStation = getBestStation();
+    
     addBotMessage(
-      '📍 Вот ближайшие АЗС Max Fuel с актуальной загруженностью:\n\n' +
-      '🟢 Свободно • 🟡 Средняя • 🔴 Большая очередь\n\n' +
-      '💡 **Рекомендация:** Max Fuel #4 — всего 1 авто!',
+      '📍 **Выберите АЗС:**\n\n' +
+      `💡 *Рекомендация:* **${bestStation.name}** — лучший баланс рейтинга и загруженности`,
       [
-        { buttons: [{ label: '✅ Max Fuel #4 (1 авто, 2 мин)', action: 'select_station_4', style: 'primary' }] },
-        { buttons: [
-          { label: 'Max Fuel #1 (2 авто, 3 мин)', action: 'select_station_1' },
-          { label: 'Max Fuel #2 (7 авто, 12 мин)', action: 'select_station_2' },
-        ]},
-        { buttons: [{ label: 'Max Fuel #3 (15 авто, 25 мин)', action: 'select_station_3' }] },
+        { buttons: [{ label: `✅ ${bestStation.name} (${bestStation.queueCount} авто)`, action: `select_station_${bestStation.id}`, style: 'primary' }] },
+        ...stations.filter(s => s.id !== bestStation.id).map(s => ({
+          buttons: [{ label: `${s.name} (${s.queueCount} авто)`, action: `select_station_${s.id}` }]
+        })),
         { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
       ]
     );
   };
 
   const handleFindStation = () => {
+    const stationsInfo = stations.map(s => {
+      const icon = s.loadLevel === 'low' ? '🟢' : s.loadLevel === 'medium' ? '🟡' : '🔴';
+      return `${icon} **${s.name}**\n   📍 ${s.address} • 📏 ${s.distance}\n   🚗 ${s.queueCount} авто • ⏱ ~${s.avgWaitMinutes} мин\n   ⭐ Яндекс: **${s.yandexRating}/5** (${s.yandexReviewsCount})`;
+    }).join('\n\n');
+
     addBotMessage(
-      '🗺️ **АЗС Max Fuel рядом с вами:**\n\n' +
-      stations.map(s => {
-        const icon = s.loadLevel === 'low' ? '🟢' : s.loadLevel === 'medium' ? '🟡' : '🔴';
-        return `${icon} **${s.name}** — ${s.address}\n   📏 ${s.distance} • 🚗 ${s.queueCount} авто • ⏱ ~${s.avgWaitMinutes} мин\n   ⭐ ${s.rating} (${s.reviewsCount} отзывов)`;
-      }).join('\n\n'),
+      `🗺️ **АЗС Max Fuel рядом:**\n\n${stationsInfo}`,
       [
         { buttons: [{ label: '⛽ Заправиться', action: 'refuel', style: 'primary' }] },
         { buttons: [
@@ -227,16 +225,16 @@ export const ChatBot: React.FC = () => {
       const fuelKey = fuel.type === 'ДТ' ? 'dt' : fuel.type.replace('АИ-', '');
       return {
         buttons: [{
-          label: `${fuel.type} — ${fuel.price} ₽/л${fuel.available ? '' : ' ❌ нет'}`,
+          label: `${fuel.available ? '⛽' : '❌'} ${fuel.type} — ${fuel.price} ₽/л`,
           action: `fuel_${fuelKey}`,
           style: 'secondary' as const,
         }]
       };
     });
-    fuelButtons.push({ buttons: [{ label: '↩️ Выбрать другую АЗС', action: 'refuel' }] });
+    fuelButtons.push({ buttons: [{ label: '↩️ Другая АЗС', action: 'refuel' }] });
 
     addBotMessage(
-      `${loadIcon} Вы выбрали **${station.name}**\n📍 ${station.address}\n🚗 В очереди: ${station.queueCount} авто (~${station.avgWaitMinutes} мин)\n⭐ ${station.rating}/5 (${station.reviewsCount} отзывов)\n\nВыберите тип топлива:`,
+      `${loadIcon} **${station.name}**\n📍 ${station.address}\n🚗 Очередь: ${station.queueCount} авто (~${station.avgWaitMinutes} мин)\n⭐ Яндекс: **${station.yandexRating}/5** (${station.yandexReviewsCount} отзывов)\n\n⛽ Выберите топливо:`,
       fuelButtons
     );
   };
@@ -250,8 +248,8 @@ export const ChatBot: React.FC = () => {
     const fuel = station.fuelTypes.find(f => f.type === actualFuelType);
     
     if (!fuel || !fuel.available) {
-      addBotMessage('❌ К сожалению, это топливо сейчас недоступно. Выберите другое:', [
-        { buttons: [{ label: '↩️ Выбрать другое топливо', action: 'refuel' }] },
+      addBotMessage('❌ Это топливо недоступно. Выберите другое:', [
+        { buttons: [{ label: '↩️ Выбрать топливо', action: 'refuel' }] },
       ]);
       return;
     }
@@ -260,7 +258,7 @@ export const ChatBot: React.FC = () => {
     setBotState('choosing_liters');
 
     addBotMessage(
-      `⛽ Отлично! **${actualFuelType}** по цене ${fuel.price} ₽/л\n\nСколько литров заправить?`,
+      `⛽ **${actualFuelType}** — ${fuel.price} ₽/л\n\n💡 *Популярные объёмы:*`,
       [
         { buttons: [
           { label: '20 л', action: 'liters_20' },
@@ -269,7 +267,7 @@ export const ChatBot: React.FC = () => {
         ]},
         { buttons: [
           { label: '50 л', action: 'liters_50' },
-          { label: '✏️ Другое кол-во', action: 'liters_60' },
+          { label: '60 л', action: 'liters_60' },
         ]},
         { buttons: [{ label: '↩️ Назад', action: 'refuel' }] },
       ]
@@ -282,9 +280,10 @@ export const ChatBot: React.FC = () => {
     setSelectedLiters(liters);
     setBotState('viewing_smart_slots');
 
-    // Показываем Smart Slots
     const slots = generateSmartSlots(selectedStation.id);
     const availableSlots = slots.filter(s => s.available);
+    const fuel = selectedStation.fuelTypes.find(f => f.type === selectedFuel);
+    const total = fuel ? fuel.price * liters : 0;
 
     const slotButtons: { buttons: { label: string; action: string; style?: 'primary' | 'secondary' | 'danger' }[] }[] = slots.slice(0, 5).map(slot => ({
       buttons: [{
@@ -296,11 +295,10 @@ export const ChatBot: React.FC = () => {
     slotButtons.push({ buttons: [{ label: '↩️ Назад', action: 'refuel' }] });
 
     addBotMessage(
-      `🚀 **Smart Slots** — инновационная система распределения!\n\n` +
-      `Выберите удобный временной слот прибытия (каждые 3 минуты):\n\n` +
-      `📦 Объём: **${liters} л ${selectedFuel}**\n` +
-      `💰 Стоимость: **${(selectedStation.fuelTypes.find(f => f.type === selectedFuel)?.price || 0) * liters} ₽**\n\n` +
-      `Доступно слотов: **${availableSlots.length}/${slots.length}**`,
+      `🚀 **Smart Slots** — выберите время прибытия:\n\n` +
+      `⛽ ${selectedFuel} • ${liters} л • 💰 ${total.toFixed(0)} ₽\n` +
+      `📊 Свободно слотов: **${availableSlots.length}/${slots.length}**\n\n` +
+      `💡 *Приезжайте точно ко времени — ожидание ~2 мин!*`,
       slotButtons
     );
   };
@@ -319,22 +317,16 @@ export const ChatBot: React.FC = () => {
     const total = fuel ? fuel.price * selectedLiters : 0;
 
     addBotMessage(
-      `📋 **Ваш заказ с Smart Slot:**\n\n` +
-      `🏢 Станция: **${selectedStation.name}**\n` +
-      `📍 ${selectedStation.address}\n` +
-      `⛽ Топливо: **${selectedFuel}**\n` +
-      `📦 Объём: **${selectedLiters} л**\n` +
-      `🕐 Слот прибытия: **${slot.time}**\n` +
-      `━━━━━━━━━━━━━━━\n` +
-      `💳 **Итого: ${total.toFixed(0)} ₽**\n\n` +
-      `🚗 Ваша позиция: **#${slot.carsInSlot + 1}** в слоте\n` +
-      `⏱ Ожидание: **~2-3 мин** (вместо ${selectedStation.avgWaitMinutes} мин!)\n\n` +
-      `✨ **Экономия времени: ${Math.max(0, selectedStation.avgWaitMinutes - 3)} мин!**\n\n` +
-      `Подтверждаете заказ?`,
+      `📋 **Подтверждение заказа:**\n\n` +
+      `🏢 ${selectedStation.name}\n` +
+      `⛽ ${selectedFuel} • ${selectedLiters} л\n` +
+      `🕐 Слот: **${slot.time}**\n` +
+      `💰 **Итого: ${total.toFixed(0)} ₽**\n\n` +
+      `✨ Экономия: **${Math.max(0, selectedStation.avgWaitMinutes - 3)} мин!**`,
       [
         { buttons: [
-          { label: '✅ Подтвердить', action: 'confirm_order', style: 'primary' },
-          { label: '❌ Отменить', action: 'cancel_order' },
+          { label: '✅ Оплатить', action: 'confirm_order', style: 'primary' },
+          { label: '❌ Отмена', action: 'cancel_order' },
         ]},
       ]
     );
@@ -343,18 +335,17 @@ export const ChatBot: React.FC = () => {
   const handleConfirmOrder = () => {
     if (!selectedStation || !selectedFuel || !selectedLiters || !selectedSlot) return;
 
-    const fuel = selectedStation.fuelTypes.find(f => f.type === selectedFuel);
-    const total = fuel ? fuel.price * selectedLiters : 0;
-
     addBotMessage(
-      `💳 Выберите способ оплаты:\n\n` +
-      `💼 Баланс: **${userBalance.toLocaleString()} ₽**\n` +
-      `🪙 Бонусы: **${userBonusPoints} баллов** (≈${Math.floor(userBonusPoints / 10)} ₽)`,
+      `💳 **Способ оплаты:**\n\n` +
+      `💼 Баланс: ${userBalance.toLocaleString()} ₽\n` +
+      `🪙 Бонусы: ${userBonusPoints} (≈${Math.floor(userBonusPoints / 10)} ₽)`,
       [
-        { buttons: [{ label: `💼 С баланса (${userBalance.toLocaleString()} ₽)`, action: 'pay_balance', style: 'primary' }] },
-        { buttons: [{ label: '💳 Банковская карта', action: 'pay_card' }] },
-        { buttons: [{ label: `🪙 Оплатить бонусами`, action: 'pay_bonus' }] },
-        { buttons: [{ label: '↩️ Отменить', action: 'cancel_order' }] },
+        { buttons: [{ label: `💼 Баланс (${userBalance.toLocaleString()} ₽)`, action: 'pay_balance', style: 'primary' }] },
+        { buttons: [
+          { label: '💳 Карта', action: 'pay_card' },
+          { label: `🪙 Бонусы`, action: 'pay_bonus' },
+        ]},
+        { buttons: [{ label: '↩️ Назад', action: 'cancel_order' }] },
       ]
     );
   };
@@ -382,42 +373,33 @@ export const ChatBot: React.FC = () => {
 
     setActiveOrders(prev => [...prev, order]);
 
-    const methodText = method === 'balance' ? '💼 с баланса' : method === 'card' ? '💳 банковской картой' : '🪙 бонусами';
+    const methodText = method === 'balance' ? '💼 баланс' : method === 'card' ? '💳 карта' : '🪙 бонусы';
 
     addBotMessage(
-      `✅ **Заказ оплачен** (${methodText})!\n\n` +
-      `🎫 Номер: **${order.id}**\n` +
+      `✅ **Заказ оплачен!** (${methodText})\n\n` +
+      `🎫 ${order.id}\n` +
       `🏢 ${order.stationName}\n` +
-      `⛽ ${order.fuelType}, ${order.liters} л\n` +
+      `⛽ ${order.fuelType} • ${order.liters} л\n` +
       `💰 ${order.totalPrice.toFixed(0)} ₽\n` +
       `🕐 Слот: **${order.slotTime}**\n\n` +
-      `📍 Ваша позиция: **#${order.queueNumber}** в слоте\n` +
-      `⏱ Приезжайте к **${order.slotTime}** — ожидание ~2 мин!\n\n` +
-      `🚀 **Smart Slots сэкономили вам ${selectedStation.avgWaitMinutes - 3} мин!**\n\n` +
-      `Я уведомлю вас, когда подойдёт ваша очередь! 🔔`,
+      `🚀 Приезжайте к **${order.slotTime}** — ожидание ~2 мин!`,
       [
-        { buttons: [{ label: '📱 Показать QR-код', action: 'show_qr', style: 'primary' }] },
+        { buttons: [{ label: '📱 QR-код', action: 'show_qr', style: 'primary' }] },
         { buttons: [
           { label: '💬 Чат АЗС', action: `chat_${selectedStation.id}` },
-          { label: '📋 Мои заказы', action: 'my_orders' },
+          { label: '🏠 Меню', action: 'back_to_menu' },
         ]},
-        { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
       ]
     );
 
     setBotState('order_created');
 
-    // Simulate queue progress
     setTimeout(() => {
       addBotMessage(
-        `🔔 **Уведомление:**\n\n` +
-        `Ваш слот на **${order.stationName}** через **2 минуты**!\n\n` +
-        `🕐 Время прибытия: **${order.slotTime}**\n` +
-        `📍 Позиция: **#1** в слоте\n\n` +
-        `Подъезжайте к колонке! Покажите QR-код оператору.`,
+        `🔔 **Уведомление:**\n\nВаш слот через **2 минуты**!\n🕐 ${order.slotTime} • 📍 #${order.queueNumber}`,
         [
-          { buttons: [{ label: '📱 Показать QR-код', action: 'show_qr', style: 'primary' }] },
-          { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
+          { buttons: [{ label: '📱 QR-код', action: 'show_qr', style: 'primary' }] },
+          { buttons: [{ label: '🏠 Меню', action: 'back_to_menu' }] },
         ]
       );
     }, 15000);
@@ -426,20 +408,15 @@ export const ChatBot: React.FC = () => {
   const handleShowQR = () => {
     const order = activeOrders[activeOrders.length - 1];
     if (!order) {
-      addBotMessage('У вас нет активных заказов.', [
-        { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
+      addBotMessage('Нет активных заказов.', [
+        { buttons: [{ label: '🏠 Меню', action: 'back_to_menu' }] },
       ]);
       return;
     }
 
     addBotMessage(
-      `📱 **QR-код для заправки**\n\n` +
-      `Покажите этот код на АЗС **${order.stationName}**\n` +
-      `Заказ: ${order.id} • ${order.fuelType} ${order.liters}л\n` +
-      `Слот: ${order.slotTime}`,
-      [
-        { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
-      ],
+      `📱 **QR-код для заправки**\n\n${order.stationName}\n${order.fuelType} ${order.liters}л • ${order.slotTime}`,
+      [{ buttons: [{ label: '🏠 Меню', action: 'back_to_menu' }] }],
       { qrCode: order.qrCode }
     );
   };
@@ -448,71 +425,63 @@ export const ChatBot: React.FC = () => {
     setBotState('viewing_queue');
     if (activeOrders.length === 0) {
       addBotMessage(
-        '📋 У вас пока нет активных заказов.\n\nСоздайте предзаказ с Smart Slots, чтобы заправиться без ожидания!',
+        '📋 Нет активных заказов.\n\nСоздайте предзаказ с Smart Slots!',
         [
-          { buttons: [{ label: '⛽ Заправить авто', action: 'refuel', style: 'primary' }] },
-          { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
+          { buttons: [{ label: '⛽ Заправить', action: 'refuel', style: 'primary' }] },
+          { buttons: [{ label: '🏠 Меню', action: 'back_to_menu' }] },
         ]
       );
     } else {
       const ordersText = activeOrders.map(o => 
-        `🎫 **${o.id}** — ${o.stationName}\n   ⛽ ${o.fuelType}, ${o.liters}л • 💰 ${o.totalPrice.toFixed(0)} ₽\n   🕐 Слот: ${o.slotTime} • 📍 Позиция: #${o.queueNumber}`
+        `🎫 **${o.id}** — ${o.stationName}\n   ⛽ ${o.fuelType} ${o.liters}л • 💰 ${o.totalPrice.toFixed(0)} ₽\n   🕐 ${o.slotTime} • #${o.queueNumber}`
       ).join('\n\n');
 
-      addBotMessage(
-        `📋 **Ваши активные заказы:**\n\n${ordersText}`,
-        [
-          { buttons: [{ label: '📱 QR-код последнего', action: 'show_qr', style: 'primary' }] },
-          { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
-        ]
-      );
+      addBotMessage(`📋 **Активные заказы:**\n\n${ordersText}`, [
+        { buttons: [{ label: '📱 QR-код', action: 'show_qr', style: 'primary' }] },
+        { buttons: [{ label: '🏠 Меню', action: 'back_to_menu' }] },
+      ]);
     }
   };
 
   const handleBalance = () => {
     addBotMessage(
-      `💳 **Ваш баланс и бонусы:**\n\n` +
-      `💼 Баланс: **${userBalance.toLocaleString()} ₽**\n` +
-      `🪙 Бонусные баллы: **${userBonusPoints}**\n` +
-      `   (≈${Math.floor(userBonusPoints / 10)} ₽)\n\n` +
-      `🏆 Ваш уровень: **Gold** 🥇\n` +
-      `📊 Заправок: 67 • ⛽ Литров: 2 840\n\n` +
-      `💡 Используйте Smart Slots и получайте дополнительные бонусы за пунктуальность!`,
+      `💳 **Баланс:**\n\n` +
+      `💼 ${userBalance.toLocaleString()} ₽\n` +
+      `🪙 ${userBonusPoints} баллов (≈${Math.floor(userBonusPoints / 10)} ₽)\n\n` +
+      `🏆 Уровень: **Gold** 🥇\n` +
+      `📊 67 заправок • 2 840 л`,
       [
-        { buttons: [{ label: '💼 Пополнить баланс', action: 'back_to_menu', style: 'primary' }] },
-        { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
+        { buttons: [{ label: '💼 Пополнить', action: 'back_to_menu', style: 'primary' }] },
+        { buttons: [{ label: '🏠 Меню', action: 'back_to_menu' }] },
       ]
     );
   };
 
   const handleHowSmartSlots = () => {
     addBotMessage(
-      `🚀 **Как работает Smart Slots?**\n\n` +
-      `Это инновационная система распределения времени прибытия на АЗС:\n\n` +
-      `1️⃣ **Временные слоты** — бот создаёт слоты каждые 3 минуты\n\n` +
-      `2️⃣ **Равномерное распределение** — машины не скапливаются в очереди\n\n` +
-      `3️⃣ **Точное время** — вы приезжаете ровно к своему слоту\n\n` +
-      `4️⃣ **Минимальное ожидание** — 2-3 минуты вместо 15-25!\n\n` +
-      `5️⃣ **Бонусы за пунктуальность** — +50 баллов за прибытие вовремя\n\n` +
+      `🚀 **Smart Slots — как это работает:**\n\n` +
+      `1️⃣ Слоты каждые 3 минуты\n` +
+      `2️⃣ Равномерное распределение\n` +
+      `3️⃣ Приезжайте точно ко времени\n` +
+      `4️⃣ Ожидание: **2-3 мин** вместо 15-25!\n\n` +
       `📊 **Результат:**\n` +
-      `• Очереди сократились на **70%**\n` +
-      `• Среднее ожидание: **3 мин** вместо **15 мин**\n` +
-      `• Пропускная способность АЗС выросла на **40%**\n\n` +
-      `💡 **Дополнительные фичи:**\n` +
-      `• 💬 Живой чат водителей — актуальная информация с АЗС\n` +
-      `• ⭐ Отзывы и рейтинги — выбирайте лучшие АЗС\n` +
-      `• 🤝 Система "Уступи место" — получайте бонусы за помощь другим`,
+      `• Очереди ↓ на **70%**\n` +
+      `• Время ожидания: **3 мин**\n` +
+      `• Пропускная способность ↑ на **40%**\n\n` +
+      `💡 **Дополнительно:**\n` +
+      `• 💬 Чат водителей\n` +
+      `• ⭐ Отзывы из Яндекс Карт\n` +
+      `• 🤝 Система "Уступи место"`,
       [
-        { buttons: [{ label: '⛽ Попробовать Smart Slots', action: 'refuel', style: 'primary' }] },
-        { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
+        { buttons: [{ label: '⛽ Попробовать', action: 'refuel', style: 'primary' }] },
+        { buttons: [{ label: '🏠 Меню', action: 'back_to_menu' }] },
       ]
     );
   };
 
   const handleDriversChat = () => {
     addBotMessage(
-      '💬 **Выберите АЗС для просмотра чата водителей:**\n\n' +
-      'Здесь водители делятся актуальной информацией о ситуации на АЗС в реальном времени!',
+      '💬 **Выберите АЗС:**\n\nВодители делятся актуальной информацией в реальном времени!',
       [
         { buttons: [
           { label: '💬 Max Fuel #1', action: 'chat_1', style: 'primary' },
@@ -536,46 +505,37 @@ export const ChatBot: React.FC = () => {
 
     const chatMsgs = stationChatMessages.filter(m => m.stationId === stationId);
     
-    let chatText = `💬 **Чат водителей — ${station.name}**\n📍 ${station.address}\n\n`;
+    let chatText = `💬 **Чат — ${station.name}**\n📍 ${station.address}\n\n`;
     
     chatMsgs.slice(-5).forEach(msg => {
       const time = msg.timestamp.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-      if (msg.type === 'alert') {
-        chatText += `⚠️ **${msg.author}** [${time}]:\n${msg.text}\n\n`;
-      } else if (msg.type === 'status_update') {
-        chatText += `⚡ **${msg.author}** [${time}]:\n${msg.text}\n\n`;
-      } else {
-        chatText += `${msg.avatar} **${msg.author}** [${time}]:\n${msg.text}\n\n`;
-      }
+      const prefix = msg.type === 'alert' ? '⚠️' : msg.type === 'status_update' ? '⚡' : msg.avatar;
+      chatText += `${prefix} **${msg.author}** [${time}]:\n${msg.text}\n\n`;
     });
 
-    addBotMessage(
-      chatText + 'Хотите написать сообщение или задать вопрос водителям?',
-      [
-        { buttons: [{ label: '✏️ Написать сообщение', action: 'send_message', style: 'primary' }] },
-        { buttons: [
-          { label: '⛽ Заправиться здесь', action: `select_station_${stationId}` },
-          { label: '⭐ Отзывы', action: `review_${stationId}` },
-        ]},
-        { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
-      ]
-    );
+    addBotMessage(chatText + 'Хотите написать?', [
+      { buttons: [{ label: '✏️ Написать', action: 'send_message', style: 'primary' }] },
+      { buttons: [
+        { label: '⛽ Заправиться', action: `select_station_${stationId}` },
+        { label: '⭐ Отзывы', action: `review_${stationId}` },
+      ]},
+      { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
+    ]);
   };
 
   const handleSendMessage = () => {
     if (!selectedStation) return;
 
     addBotMessage(
-      `✏️ Напишите ваше сообщение для чата **${selectedStation.name}**:\n\n` +
-      `(В реальном приложении здесь будет поле ввода текста)`,
+      `✏️ Сообщение для **${selectedStation.name}:**\n\n(В реальном приложении — поле ввода)`,
       [
         { buttons: [
-          { label: '👍 Очередь двигается быстро', action: 'back_to_menu' },
+          { label: '👍 Очередь быстрая', action: 'back_to_menu' },
           { label: '⚠️ Большая очередь', action: 'back_to_menu' },
         ]},
         { buttons: [
-          { label: '⛽ Колонка свободна', action: 'back_to_menu' },
-          { label: '❌ Колонка не работает', action: 'back_to_menu' },
+          { label: '⛽ Свободно', action: 'back_to_menu' },
+          { label: '❌ Не работает', action: 'back_to_menu' },
         ]},
         { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
       ]
@@ -584,15 +544,15 @@ export const ChatBot: React.FC = () => {
 
   const handleReviewsList = () => {
     addBotMessage(
-      '⭐ **Выберите АЗС для просмотра отзывов:**',
+      '⭐ **Отзывы из Яндекс Карт:**\n\nВыберите АЗС:',
       [
         { buttons: [
-          { label: `⭐ Max Fuel #1 (${stations[0].rating})`, action: 'review_1', style: 'primary' },
-          { label: `⭐ Max Fuel #2 (${stations[1].rating})`, action: 'review_2' },
+          { label: `⭐ #1 (${stations[0].yandexRating})`, action: 'review_1', style: 'primary' },
+          { label: `⭐ #2 (${stations[1].yandexRating})`, action: 'review_2' },
         ]},
         { buttons: [
-          { label: `⭐ Max Fuel #3 (${stations[2].rating})`, action: 'review_3' },
-          { label: `⭐ Max Fuel #4 (${stations[3].rating})`, action: 'review_4' },
+          { label: `⭐ #3 (${stations[2].yandexRating})`, action: 'review_3' },
+          { label: `⭐ #4 (${stations[3].yandexRating})`, action: 'review_4' },
         ]},
         { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
       ]
@@ -606,82 +566,55 @@ export const ChatBot: React.FC = () => {
     setSelectedStation(station);
     setBotState('writing_review');
 
-    const reviews = stationReviews.filter(r => r.stationId === stationId);
+    // Комбинируем отзывы из Яндекс Карт и внутренние
+    const yaReviews = yandexReviews.filter(r => r.stationId === stationId);
+    const internalReviews = stationReviews.filter(r => r.stationId === stationId);
+    const allReviews = [...yaReviews, ...internalReviews].slice(0, 4);
     
-    let reviewsText = `⭐ **Отзывы — ${station.name}**\n`;
-    reviewsText += `Рейтинг: **${station.rating}/5** (${station.reviewsCount} отзывов)\n\n`;
+    let reviewsText = `⭐ **${station.name}**\n\n`;
+    reviewsText += `📊 **Рейтинг Яндекс Карт:** ${station.yandexRating}/5 (${station.yandexReviewsCount} отзывов)\n`;
+    reviewsText += `📊 **Внутренний рейтинг:** ${station.rating}/5 (${station.reviewsCount} отзывов)\n\n`;
+    reviewsText += `📝 **Последние отзывы:**\n\n`;
     
-    reviews.slice(0, 3).forEach(review => {
+    allReviews.forEach(review => {
       const stars = '⭐'.repeat(review.rating);
-      const date = review.timestamp.toLocaleDateString('ru-RU');
-      reviewsText += `${review.avatar} **${review.author}** ${stars}\n`;
-      reviewsText += `📅 ${date} • 👍 ${review.helpful}\n`;
+      const source = 'source' in review && review.source === 'yandex' ? '🟡 Яндекс' : '🔵 Max';
+      reviewsText += `${source} ${review.avatar} **${review.author}** ${stars}\n`;
       reviewsText += `${review.text}\n\n`;
     });
 
-    addBotMessage(
-      reviewsText + 'Хотите оставить свой отзыв?',
-      [
-        { buttons: [{ label: '✏️ Написать отзыв', action: 'submit_review', style: 'primary' }] },
-        { buttons: [
-          { label: '💬 Чат водителей', action: `chat_${stationId}` },
-          { label: '⛽ Заправиться', action: `select_station_${stationId}` },
-        ]},
-        { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
-      ]
-    );
+    addBotMessage(reviewsText + 'Оставить свой отзыв?', [
+      { buttons: [{ label: '✏️ Написать отзыв', action: 'submit_review', style: 'primary' }] },
+      { buttons: [
+        { label: '💬 Чат', action: `chat_${stationId}` },
+        { label: '⛽ Заправиться', action: `select_station_${stationId}` },
+      ]},
+      { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
+    ]);
   };
 
   const handleSubmitReview = () => {
     if (!selectedStation) return;
 
-    addBotMessage(
-      `✏️ **Оставить отзыв о ${selectedStation.name}:**\n\n` +
-      `Выберите оценку:`,
-      [
-        { buttons: [
-          { label: '⭐', action: 'rate_1' },
-          { label: '⭐⭐', action: 'rate_2' },
-          { label: '⭐⭐⭐', action: 'rate_3' },
-        ]},
-        { buttons: [
-          { label: '⭐⭐⭐⭐', action: 'rate_4' },
-          { label: '⭐⭐⭐⭐⭐', action: 'rate_5', style: 'primary' },
-        ]},
-        { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
-      ]
-    );
-  };
-
-  const handleYieldPosition = (orderId: string) => {
-    const order = activeOrders.find(o => o.id === orderId);
-    if (!order) return;
-
-    addBotMessage(
-      `🤝 **Система "Уступи место"**\n\n` +
-      `Вы можете уступить свою позицию в очереди другому водителю и получить бонусы!\n\n` +
-      `🎫 Заказ: **${order.id}**\n` +
-      `📍 ${order.stationName}\n` +
-      `🕐 Слот: ${order.slotTime}\n\n` +
-      `💎 **Награда:** +100 бонусных баллов\n\n` +
-      `Подтверждаете?`,
-      [
-        { buttons: [
-          { label: '✅ Да, уступить', action: 'back_to_menu', style: 'primary' },
-          { label: '❌ Нет, оставить', action: 'back_to_menu' },
-        ]},
-      ]
-    );
+    addBotMessage(`⭐ **Оценка для ${selectedStation.name}:**`, [
+      { buttons: [
+        { label: '⭐', action: 'rate_1' },
+        { label: '⭐⭐', action: 'rate_2' },
+        { label: '⭐⭐⭐', action: 'rate_3' },
+      ]},
+      { buttons: [
+        { label: '⭐⭐⭐⭐', action: 'rate_4' },
+        { label: '⭐⭐⭐⭐⭐', action: 'rate_5', style: 'primary' },
+      ]},
+      { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
+    ]);
   };
 
   const handleCancelOrder = () => {
-    addBotMessage(
-      '❌ Заказ отменён. Возврат средств будет обработан в течение 5 минут.\n\nЧем ещё могу помочь?',
-      [
-        { buttons: [{ label: '⛽ Заправить авто', action: 'refuel', style: 'primary' }] },
-        { buttons: [{ label: '🏠 Главное меню', action: 'back_to_menu' }] },
-      ]
-    );
+    addBotMessage('❌ Заказ отменён. Возврат за 5 минут.', [
+      { buttons: [{ label: '⛽ Заправить', action: 'refuel', style: 'primary' }] },
+      { buttons: [{ label: '🏠 Меню', action: 'back_to_menu' }] },
+    ]);
     setBotState('choosing_action');
   };
 
@@ -692,21 +625,18 @@ export const ChatBot: React.FC = () => {
     setSelectedLiters(0);
     setSelectedSlot(null);
 
+    const bestStation = getBestStation();
     addBotMessage(
-      '🏠 Главное меню. Что хотите сделать?',
+      `🏠 **Главное меню**\n\n💡 Сейчас лучше: **${bestStation.name}** (${bestStation.queueCount} авто)`,
       [
-        { buttons: [{ label: '⛽ Заправить авто', action: 'refuel', style: 'primary' }] },
+        { buttons: [{ label: `⛽ Быстрая (${bestStation.name})`, action: `quick_refuel_${bestStation.id}`, style: 'primary' }] },
         { buttons: [
-          { label: '📍 Найти АЗС', action: 'find_station' },
-          { label: '📋 Мои заказы', action: 'my_orders' },
+          { label: '📍 Выбрать АЗС', action: 'find_station' },
+          { label: '📋 Заказы', action: 'my_orders' },
         ]},
         { buttons: [
-          { label: '💬 Чат водителей', action: 'drivers_chat' },
+          { label: '💬 Чат', action: 'drivers_chat' },
           { label: '⭐ Отзывы', action: 'reviews' },
-        ]},
-        { buttons: [
-          { label: '💳 Баланс', action: 'balance' },
-          { label: '🚀 Как работает Smart Slots?', action: 'how_smart_slots' },
         ]},
       ]
     );
@@ -725,7 +655,7 @@ export const ChatBot: React.FC = () => {
     }
 
     return (
-      <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-300">
+      <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-300 mt-3">
         <div className="grid gap-0 mx-auto w-[180px] h-[180px]" style={{ gridTemplateColumns: 'repeat(15, 1fr)' }}>
           {cells.map((filled, i) => (
             <div key={i} className={`w-full aspect-square ${filled ? 'bg-gray-900' : 'bg-white'}`}></div>
@@ -743,7 +673,7 @@ export const ChatBot: React.FC = () => {
 
     return (
       <div key={msg.id} className={`flex ${isBot ? 'justify-start' : 'justify-end'} mb-3 animate-fadeIn`}>
-        <div className={`max-w-[85%] ${isBot ? 'order-1' : 'order-1'}`}>
+        <div className="max-w-[85%]">
           {isBot && (
             <div className="flex items-center gap-2 mb-1">
               <div className="w-6 h-6 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center">
@@ -767,11 +697,7 @@ export const ChatBot: React.FC = () => {
               </div>
             )}
 
-            {msg.qrCode && (
-              <div className="mt-3">
-                {renderQRCode(msg.qrCode)}
-              </div>
-            )}
+            {msg.qrCode && renderQRCode(msg.qrCode)}
           </div>
 
           {msg.buttons && msg.buttons.length > 0 && (
@@ -812,7 +738,7 @@ export const ChatBot: React.FC = () => {
           <h1 className="font-bold text-gray-800 text-sm">Max Fuel Bot</h1>
           <p className="text-xs text-green-500 flex items-center gap-1">
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block"></span>
-            онлайн • Smart Slots активны
+            онлайн • Smart Slots
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -855,7 +781,7 @@ export const ChatBot: React.FC = () => {
             <i className="fas fa-paperclip"></i>
           </button>
           <div className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 flex items-center">
-            <span className="text-sm text-gray-400">Используйте кнопки для взаимодействия...</span>
+            <span className="text-sm text-gray-400">Используйте кнопки ↑</span>
           </div>
           <button className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">
             <i className="fas fa-microphone"></i>

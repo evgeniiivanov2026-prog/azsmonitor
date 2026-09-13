@@ -28,6 +28,8 @@ export interface StationCard {
   distance: string;
   rating: number;
   reviewsCount: number;
+  yandexRating: number;
+  yandexReviewsCount: number;
 }
 
 export interface OrderCard {
@@ -63,6 +65,18 @@ export interface Review {
   rating: number;
   text: string;
   timestamp: Date;
+  helpful: number;
+}
+
+export interface YandexReview {
+  id: string;
+  author: string;
+  avatar: string;
+  stationId: string;
+  rating: number;
+  text: string;
+  timestamp: Date;
+  source: 'yandex';
   helpful: number;
 }
 

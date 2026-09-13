@@ -1,4 +1,105 @@
-import { StationCard, ChatRoomMessage, Review, SmartSlot } from './types';
+import { StationCard, ChatRoomMessage, Review, SmartSlot, YandexReview } from './types';
+
+// Интеграция с Яндекс Картами (симуляция API)
+// В реальном приложении здесь был бы запрос к Yandex Maps API
+export const yandexRatings: Record<string, { rating: number; reviewsCount: number; lastUpdated: string }> = {
+  '1': { rating: 4.6, reviewsCount: 1243, lastUpdated: '2 мин назад' },
+  '2': { rating: 4.1, reviewsCount: 876, lastUpdated: '5 мин назад' },
+  '3': { rating: 3.7, reviewsCount: 2105, lastUpdated: '1 мин назад' },
+  '4': { rating: 4.8, reviewsCount: 3421, lastUpdated: 'сейчас' },
+};
+
+// Отзывы из Яндекс Карт (симуляция)
+export const yandexReviews: YandexReview[] = [
+  {
+    id: 'ya-1',
+    author: 'Алексей М.',
+    avatar: '👤',
+    stationId: '1',
+    rating: 5,
+    text: 'Отличная заправка! Всегда чисто, быстрый сервис. Smart Slots — это просто спасение, больше не стою в очередях.',
+    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    source: 'yandex',
+    helpful: 42,
+  },
+  {
+    id: 'ya-2',
+    author: 'Ирина К.',
+    avatar: '👤',
+    stationId: '1',
+    rating: 4,
+    text: 'Хорошая АЗС, удобная навигация через бота. Единственное — хотелось бы больше слотов в час пик.',
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    source: 'yandex',
+    helpful: 28,
+  },
+  {
+    id: 'ya-3',
+    author: 'Дмитрий В.',
+    avatar: '👤',
+    stationId: '2',
+    rating: 4,
+    text: 'Нормальная заправка. Бот помогает выбрать лучшее время, очереди стали меньше.',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    source: 'yandex',
+    helpful: 15,
+  },
+  {
+    id: 'ya-4',
+    author: 'Ольга С.',
+    avatar: '👤',
+    stationId: '2',
+    rating: 3,
+    text: 'Бывает очередь, но с Smart Slots стало лучше. Персонал вежливый.',
+    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    source: 'yandex',
+    helpful: 9,
+  },
+  {
+    id: 'ya-5',
+    author: 'Сергей П.',
+    avatar: '👤',
+    stationId: '3',
+    rating: 3,
+    text: 'Часто бывают очереди. Колонки старые, но топливо качественное. Бот реально помогает.',
+    timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+    source: 'yandex',
+    helpful: 22,
+  },
+  {
+    id: 'ya-6',
+    author: 'Наталья Р.',
+    avatar: '👤',
+    stationId: '3',
+    rating: 4,
+    text: 'С приложением стало намного удобнее! Не трачу время на ожидание.',
+    timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+    source: 'yandex',
+    helpful: 18,
+  },
+  {
+    id: 'ya-7',
+    author: 'Андрей Л.',
+    avatar: '👤',
+    stationId: '4',
+    rating: 5,
+    text: 'Лучшая АЗС в городе! Всегда свободные слоты, быстрое обслуживание. Рекомендую всем!',
+    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    source: 'yandex',
+    helpful: 56,
+  },
+  {
+    id: 'ya-8',
+    author: 'Елена Т.',
+    avatar: '👤',
+    stationId: '4',
+    rating: 5,
+    text: 'Пользуюсь Smart Slots уже месяц — экономия времени колоссальная! Спасибо разработчикам.',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    source: 'yandex',
+    helpful: 41,
+  },
+];
 
 export const stations: StationCard[] = [
   {
@@ -11,6 +112,8 @@ export const stations: StationCard[] = [
     distance: '1.2 км',
     rating: 4.8,
     reviewsCount: 156,
+    yandexRating: yandexRatings['1'].rating,
+    yandexReviewsCount: yandexRatings['1'].reviewsCount,
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
@@ -28,6 +131,8 @@ export const stations: StationCard[] = [
     distance: '2.8 км',
     rating: 4.3,
     reviewsCount: 89,
+    yandexRating: yandexRatings['2'].rating,
+    yandexReviewsCount: yandexRatings['2'].reviewsCount,
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
@@ -45,6 +150,8 @@ export const stations: StationCard[] = [
     distance: '3.5 км',
     rating: 3.9,
     reviewsCount: 234,
+    yandexRating: yandexRatings['3'].rating,
+    yandexReviewsCount: yandexRatings['3'].reviewsCount,
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
@@ -62,6 +169,8 @@ export const stations: StationCard[] = [
     distance: '4.1 км',
     rating: 4.9,
     reviewsCount: 312,
+    yandexRating: yandexRatings['4'].rating,
+    yandexReviewsCount: yandexRatings['4'].reviewsCount,
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
@@ -151,7 +260,7 @@ export const stationChatMessages: ChatRoomMessage[] = [
   },
 ];
 
-// Отзывы водителей
+// Отзывы водителей (внутренние)
 export const stationReviews: Review[] = [
   {
     id: '1',
@@ -214,8 +323,8 @@ export const generateSmartSlots = (stationId: string): SmartSlot[] => {
   const now = new Date();
   
   for (let i = 0; i < 8; i++) {
-    const slotTime = new Date(now.getTime() + (i + 1) * 3 * 60000); // каждые 3 минуты
-    const isAvailable = Math.random() > 0.3; // 70% слотов свободны
+    const slotTime = new Date(now.getTime() + (i + 1) * 3 * 60000);
+    const isAvailable = Math.random() > 0.3;
     const carsInSlot = isAvailable ? Math.floor(Math.random() * 2) : 0;
     
     slots.push({
@@ -227,4 +336,13 @@ export const generateSmartSlots = (stationId: string): SmartSlot[] => {
   }
 
   return slots;
+};
+
+// Получить лучшую АЗС по рейтингу и загруженности
+export const getBestStation = (): StationCard => {
+  return [...stations].sort((a, b) => {
+    const scoreA = a.yandexRating * 10 - a.queueCount * 2;
+    const scoreB = b.yandexRating * 10 - b.queueCount * 2;
+    return scoreB - scoreA;
+  })[0];
 };
