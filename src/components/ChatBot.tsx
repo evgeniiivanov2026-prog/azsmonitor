@@ -29,7 +29,7 @@ export const ChatBot: React.FC = () => {
     const timer = setTimeout(() => {
       const bestStation = getBestStation();
       addBotMessage(
-        `Привет, ${userName}! 👋\n\nЯ — бот **Max Fuel** с системой **Smart Slots** 🚀\n\n💡 *Подсказка:* Сейчас лучше всего на **${bestStation.name}** — всего ${bestStation.queueCount} авто в очереди!\n\n⭐ Рейтинг Яндекс: **${bestStation.yandexRating}/5** (${bestStation.yandexReviewsCount} отзывов)`,
+        `Привет, ${userName}! 👋\n\nЯ — **АЗСМонитор** с системой **Smart Slots** 🚀\n\n💡 *Подсказка:* Сейчас лучше всего на **${bestStation.name}** — всего ${bestStation.queueCount} авто в очереди!\n\n⭐ Рейтинг Яндекс: **${bestStation.yandexRating}/5** (${bestStation.yandexReviewsCount} отзывов)`,
         [
           { buttons: [{ label: `⛽ Быстрая заправка (${bestStation.name})`, action: `quick_refuel_${bestStation.id}`, style: 'primary' }] },
           { buttons: [
@@ -200,7 +200,7 @@ export const ChatBot: React.FC = () => {
     }).join('\n\n');
 
     addBotMessage(
-      `🗺️ **АЗС Max Fuel рядом:**\n\n${stationsInfo}`,
+      `🗺️ **АЗС рядом с вами:**\n\n${stationsInfo}`,
       [
         { buttons: [{ label: '⛽ Заправиться', action: 'refuel', style: 'primary' }] },
         { buttons: [
@@ -484,12 +484,12 @@ export const ChatBot: React.FC = () => {
       '💬 **Выберите АЗС:**\n\nВодители делятся актуальной информацией в реальном времени!',
       [
         { buttons: [
-          { label: '💬 Max Fuel #1', action: 'chat_1', style: 'primary' },
-          { label: '💬 Max Fuel #2', action: 'chat_2' },
+          { label: '💬 АЗСМонитор #1', action: 'chat_1', style: 'primary' },
+          { label: '💬 АЗСМонитор #2', action: 'chat_2' },
         ]},
         { buttons: [
-          { label: '💬 Max Fuel #3', action: 'chat_3' },
-          { label: '💬 Max Fuel #4', action: 'chat_4' },
+          { label: '💬 АЗСМонитор #3', action: 'chat_3' },
+          { label: '💬 АЗСМонитор #4', action: 'chat_4' },
         ]},
         { buttons: [{ label: '↩️ Назад', action: 'back_to_menu' }] },
       ]
@@ -679,7 +679,7 @@ export const ChatBot: React.FC = () => {
               <div className="w-6 h-6 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center">
                 <i className="fas fa-gas-pump text-white text-[8px]"></i>
               </div>
-              <span className="text-xs text-gray-500 font-medium">Max Fuel Bot</span>
+              <span className="text-xs text-gray-500 font-medium">АЗСМонитор</span>
               <span className="text-[10px] text-gray-400">{formatTime(msg.timestamp)}</span>
             </div>
           )}
@@ -735,7 +735,7 @@ export const ChatBot: React.FC = () => {
           <i className="fas fa-gas-pump text-white text-sm"></i>
         </div>
         <div className="flex-1">
-          <h1 className="font-bold text-gray-800 text-sm">Max Fuel Bot</h1>
+          <h1 className="font-bold text-gray-800 text-sm">АЗСМонитор</h1>
           <p className="text-xs text-green-500 flex items-center gap-1">
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block"></span>
             онлайн • Smart Slots

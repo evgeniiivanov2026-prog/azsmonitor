@@ -104,7 +104,7 @@ export const yandexReviews: YandexReview[] = [
 export const stations: StationCard[] = [
   {
     id: '1',
-    name: 'Max Fuel #1',
+    name: 'АЗСМонитор #1',
     address: 'ул. Ленина, 45',
     loadLevel: 'low',
     queueCount: 2,
@@ -123,7 +123,7 @@ export const stations: StationCard[] = [
   },
   {
     id: '2',
-    name: 'Max Fuel #2',
+    name: 'АЗСМонитор #2',
     address: 'пр. Мира, 112',
     loadLevel: 'medium',
     queueCount: 7,
@@ -142,7 +142,7 @@ export const stations: StationCard[] = [
   },
   {
     id: '3',
-    name: 'Max Fuel #3',
+    name: 'АЗСМонитор #3',
     address: 'ул. Садовая, 78',
     loadLevel: 'high',
     queueCount: 15,
@@ -161,7 +161,7 @@ export const stations: StationCard[] = [
   },
   {
     id: '4',
-    name: 'Max Fuel #4',
+    name: 'АЗСМонитор #4',
     address: 'Кутузовский пр., 33',
     loadLevel: 'low',
     queueCount: 1,
