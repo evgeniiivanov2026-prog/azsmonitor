@@ -1,104 +1,68 @@
-import { GasStation, UserProfile } from './types';
+import { StationCard } from './types';
 
-export const gasStations: GasStation[] = [
+export const stations: StationCard[] = [
   {
     id: '1',
     name: 'Max Fuel #1',
     address: 'ул. Ленина, 45',
-    lat: 55.7558,
-    lng: 37.6173,
     loadLevel: 'low',
     queueCount: 2,
     avgWaitMinutes: 3,
+    distance: '1.2 км',
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
       { type: 'АИ-98', price: 63.2, available: true },
       { type: 'ДТ', price: 58.9, available: true },
     ],
-    open24h: true,
-    rating: 4.7,
   },
   {
     id: '2',
     name: 'Max Fuel #2',
     address: 'пр. Мира, 112',
-    lat: 55.7758,
-    lng: 37.6373,
     loadLevel: 'medium',
     queueCount: 7,
     avgWaitMinutes: 12,
+    distance: '2.8 км',
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
       { type: 'АИ-98', price: 63.2, available: false },
       { type: 'ДТ', price: 58.9, available: true },
     ],
-    open24h: true,
-    rating: 4.5,
   },
   {
     id: '3',
     name: 'Max Fuel #3',
     address: 'ул. Садовая, 78',
-    lat: 55.7358,
-    lng: 37.5973,
     loadLevel: 'high',
     queueCount: 15,
     avgWaitMinutes: 25,
+    distance: '3.5 км',
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
       { type: 'АИ-98', price: 63.2, available: true },
       { type: 'ДТ', price: 58.9, available: true },
     ],
-    open24h: false,
-    rating: 4.2,
   },
   {
     id: '4',
     name: 'Max Fuel #4',
     address: 'Кутузовский пр., 33',
-    lat: 55.7458,
-    lng: 37.5573,
     loadLevel: 'low',
     queueCount: 1,
     avgWaitMinutes: 2,
+    distance: '4.1 км',
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
       { type: 'АИ-98', price: 63.2, available: true },
       { type: 'ДТ', price: 58.9, available: true },
     ],
-    open24h: true,
-    rating: 4.9,
-  },
-  {
-    id: '5',
-    name: 'Max Fuel #5',
-    address: 'ул. Тверская, 15',
-    lat: 55.7658,
-    lng: 37.6073,
-    loadLevel: 'medium',
-    queueCount: 9,
-    avgWaitMinutes: 15,
-    fuelTypes: [
-      { type: 'АИ-92', price: 52.5, available: true },
-      { type: 'АИ-95', price: 56.8, available: true },
-      { type: 'АИ-98', price: 63.2, available: true },
-      { type: 'ДТ', price: 58.9, available: false },
-    ],
-    open24h: true,
-    rating: 4.4,
   },
 ];
 
-export const userProfile: UserProfile = {
-  name: 'Александр Иванов',
-  phone: '+7 (999) 123-45-67',
-  balance: 5420.0,
-  bonusPoints: 1250,
-  totalFuelLiters: 2840,
-  visitsCount: 67,
-  level: 'gold',
-};
+export const userBalance = 5420;
+export const userBonusPoints = 1250;
+export const userName = 'Александр';

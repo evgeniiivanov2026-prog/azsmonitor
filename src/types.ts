@@ -1,45 +1,66 @@
-export interface GasStation {
-  id: string;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  loadLevel: 'low' | 'medium' | 'high';
-  queueCount: number;
-  avgWaitMinutes: number;
-  fuelTypes: FuelType[];
-  open24h: boolean;
-  rating: number;
+export type MessageSender = 'bot' | 'user';
+
+export interface InlineButton {
+  label: string;
+  action: string;
+  style?: 'primary' | 'secondary' | 'danger';
+  disabled?: boolean;
 }
 
-export interface FuelType {
+export interface ButtonRow {
+  buttons: InlineButton[];
+}
+
+export interface FuelCard {
   type: string;
   price: number;
   available: boolean;
 }
 
-export interface Order {
+export interface StationCard {
   id: string;
-  stationId: string;
+  name: string;
+  address: string;
+  loadLevel: 'low' | 'medium' | 'high';
+  queueCount: number;
+  avgWaitMinutes: number;
+  fuelTypes: FuelCard[];
+  distance: string;
+}
+
+export interface OrderCard {
+  id: string;
   stationName: string;
   fuelType: string;
   liters: number;
   totalPrice: number;
-  status: 'pending' | 'confirmed' | 'ready' | 'completed';
   queueNumber: number;
   estimatedMinutes: number;
-  createdAt: Date;
+  status: 'confirmed' | 'ready' | 'completed';
   qrCode: string;
 }
 
-export interface UserProfile {
-  name: string;
-  phone: string;
-  balance: number;
-  bonusPoints: number;
-  totalFuelLiters: number;
-  visitsCount: number;
-  level: 'bronze' | 'silver' | 'gold' | 'platinum';
+export interface ChatMessage {
+  id: string;
+  sender: MessageSender;
+  text?: string;
+  buttons?: ButtonRow[];
+  stationCard?: StationCard;
+  stationList?: StationCard[];
+  orderCard?: OrderCard;
+  qrCode?: string;
+  image?: string;
+  timestamp: Date;
+  isTyping?: boolean;
 }
 
-export type Screen = 'home' | 'map' | 'order' | 'queue' | 'profile';
+export type BotState =
+  | 'idle'
+  | 'choosing_action'
+  | 'choosing_station'
+  | 'choosing_fuel'
+  | 'choosing_liters'
+  | 'confirming_order'
+  | 'order_created'
+  | 'viewing_queue'
+  | 'viewing_profile';
