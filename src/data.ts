@@ -1,4 +1,4 @@
-import { StationCard } from './types';
+import { StationCard, ChatRoomMessage, Review, SmartSlot } from './types';
 
 export const stations: StationCard[] = [
   {
@@ -9,6 +9,8 @@ export const stations: StationCard[] = [
     queueCount: 2,
     avgWaitMinutes: 3,
     distance: '1.2 км',
+    rating: 4.8,
+    reviewsCount: 156,
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
@@ -24,6 +26,8 @@ export const stations: StationCard[] = [
     queueCount: 7,
     avgWaitMinutes: 12,
     distance: '2.8 км',
+    rating: 4.3,
+    reviewsCount: 89,
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
@@ -39,6 +43,8 @@ export const stations: StationCard[] = [
     queueCount: 15,
     avgWaitMinutes: 25,
     distance: '3.5 км',
+    rating: 3.9,
+    reviewsCount: 234,
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
@@ -54,6 +60,8 @@ export const stations: StationCard[] = [
     queueCount: 1,
     avgWaitMinutes: 2,
     distance: '4.1 км',
+    rating: 4.9,
+    reviewsCount: 312,
     fuelTypes: [
       { type: 'АИ-92', price: 52.5, available: true },
       { type: 'АИ-95', price: 56.8, available: true },
@@ -66,3 +74,157 @@ export const stations: StationCard[] = [
 export const userBalance = 5420;
 export const userBonusPoints = 1250;
 export const userName = 'Александр';
+
+// Живые сообщения от водителей на АЗС (симуляция реалтайм-чата)
+export const stationChatMessages: ChatRoomMessage[] = [
+  {
+    id: '1',
+    author: 'Дмитрий К.',
+    avatar: '🚗',
+    text: 'Колонка №3 работает, очередь двигается быстро',
+    timestamp: new Date(Date.now() - 2 * 60000),
+    type: 'message',
+    stationId: '1',
+  },
+  {
+    id: '2',
+    author: 'Елена М.',
+    avatar: '🚙',
+    text: 'Заправились за 5 минут, рекомендую!',
+    timestamp: new Date(Date.now() - 5 * 60000),
+    type: 'message',
+    stationId: '1',
+  },
+  {
+    id: '3',
+    author: 'Система',
+    avatar: '⚡',
+    text: 'Свободных слотов на ближайшие 10 минут: 4',
+    timestamp: new Date(Date.now() - 1 * 60000),
+    type: 'status_update',
+    stationId: '1',
+  },
+  {
+    id: '4',
+    author: 'Игорь В.',
+    avatar: '🚕',
+    text: 'Очередь большая, но движется. Минут 15 подождать',
+    timestamp: new Date(Date.now() - 3 * 60000),
+    type: 'message',
+    stationId: '2',
+  },
+  {
+    id: '5',
+    author: 'Анна С.',
+    avatar: '🚐',
+    text: 'Кто-нибудь знает, ДТ есть?',
+    timestamp: new Date(Date.now() - 7 * 60000),
+    type: 'message',
+    stationId: '2',
+  },
+  {
+    id: '6',
+    author: 'Система',
+    avatar: '⚠️',
+    text: 'Внимание: колонка №2 временно не работает',
+    timestamp: new Date(Date.now() - 10 * 60000),
+    type: 'alert',
+    stationId: '3',
+  },
+  {
+    id: '7',
+    author: 'Максим Р.',
+    avatar: '🏎️',
+    text: 'Очень долго, лучше на другую АЗС',
+    timestamp: new Date(Date.now() - 4 * 60000),
+    type: 'message',
+    stationId: '3',
+  },
+  {
+    id: '8',
+    author: 'Ольга Т.',
+    avatar: '🚗',
+    text: 'Свободно, заправилась моментально!',
+    timestamp: new Date(Date.now() - 1 * 60000),
+    type: 'message',
+    stationId: '4',
+  },
+];
+
+// Отзывы водителей
+export const stationReviews: Review[] = [
+  {
+    id: '1',
+    author: 'Виктор П.',
+    avatar: '👨',
+    stationId: '1',
+    rating: 5,
+    text: 'Отличная заправка! Всегда чисто, персонал вежливый. Smart Slots реально работают — приезжаю точно ко времени.',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    helpful: 24,
+  },
+  {
+    id: '2',
+    author: 'Мария К.',
+    avatar: '👩',
+    stationId: '1',
+    rating: 5,
+    text: 'Лучшая АЗС в районе! Удобно что можно посмотреть очередь заранее.',
+    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    helpful: 18,
+  },
+  {
+    id: '3',
+    author: 'Сергей Л.',
+    avatar: '👨',
+    stationId: '2',
+    rating: 4,
+    text: 'Нормальная заправка, но в часы пик бывает очередь. Советую бронировать слот заранее.',
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    helpful: 12,
+  },
+  {
+    id: '4',
+    author: 'Татьяна Н.',
+    avatar: '👩',
+    stationId: '3',
+    rating: 3,
+    text: 'Часто бывают очереди. Колонки старые, но топливо качественное.',
+    timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    helpful: 8,
+  },
+  {
+    id: '5',
+    author: 'Андрей В.',
+    avatar: '👨',
+    stationId: '4',
+    rating: 5,
+    text: 'Идеальное место! Всегда свободные слоты, быстрое обслуживание. Рекомендую!',
+    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    helpful: 31,
+  },
+];
+
+// Генерация Smart Slots для станции
+export const generateSmartSlots = (stationId: string): SmartSlot[] => {
+  const station = stations.find(s => s.id === stationId);
+  if (!station) return [];
+
+  const slots: SmartSlot[] = [];
+  const now = new Date();
+  
+  for (let i = 0; i < 8; i++) {
+    const slotTime = new Date(now.getTime() + (i + 1) * 3 * 60000); // каждые 3 минуты
+    const isAvailable = Math.random() > 0.3; // 70% слотов свободны
+    const carsInSlot = isAvailable ? Math.floor(Math.random() * 2) : 0;
+    
+    slots.push({
+      number: i + 1,
+      time: slotTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+      available: isAvailable,
+      carsInSlot,
+    });
+  }
+
+  return slots;
+};

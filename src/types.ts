@@ -26,10 +26,13 @@ export interface StationCard {
   avgWaitMinutes: number;
   fuelTypes: FuelCard[];
   distance: string;
+  rating: number;
+  reviewsCount: number;
 }
 
 export interface OrderCard {
   id: string;
+  stationId: string;
   stationName: string;
   fuelType: string;
   liters: number;
@@ -38,6 +41,36 @@ export interface OrderCard {
   estimatedMinutes: number;
   status: 'confirmed' | 'ready' | 'completed';
   qrCode: string;
+  slotTime?: string;
+  slotNumber?: number;
+}
+
+export interface ChatRoomMessage {
+  id: string;
+  author: string;
+  avatar: string;
+  text: string;
+  timestamp: Date;
+  type: 'message' | 'status_update' | 'alert';
+  stationId: string;
+}
+
+export interface Review {
+  id: string;
+  author: string;
+  avatar: string;
+  stationId: string;
+  rating: number;
+  text: string;
+  timestamp: Date;
+  helpful: number;
+}
+
+export interface SmartSlot {
+  number: number;
+  time: string;
+  available: boolean;
+  carsInSlot: number;
 }
 
 export interface ChatMessage {
@@ -49,7 +82,6 @@ export interface ChatMessage {
   stationList?: StationCard[];
   orderCard?: OrderCard;
   qrCode?: string;
-  image?: string;
   timestamp: Date;
   isTyping?: boolean;
 }
@@ -63,4 +95,8 @@ export type BotState =
   | 'confirming_order'
   | 'order_created'
   | 'viewing_queue'
-  | 'viewing_profile';
+  | 'viewing_profile'
+  | 'station_chat'
+  | 'writing_review'
+  | 'viewing_smart_slots'
+  | 'yield_position';
